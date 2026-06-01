@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusTracker | Squad Workspace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-pure-black: #000000;    /* True OLED Pitch Black */
+            --card-dark: #0d1117;        /* Deep obsidian gray for subtle layout contrast */
+            --text-main: #ffffff;        /* Crisp pure white */
+            --text-muted: #707e94;       /* Tactical grey for subtitles */
+            --accent-blue: #51a2da;      /* Fedora Linux Signature Light Blue */
+            --accent-hover: #3c6eb4;     /* Fedora Linux Darker Blue for interaction states */
+            --accent-glow: rgba(81, 162, 218, 0.25);
+            --error-color: #ff3333;      /* Vivid danger red */
+            --border-color: #1f2937;     /* High-precision minimalist layout lines */
+            --primary-glow: rgba(26, 188, 156, 0.15);
+            --leader-gold: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-pure-black);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 30px 20px;
+            letter-spacing: -0.011em;
+        }
+
+        /* Authentication View Framework Overhaul */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-pure-black);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .auth-card {
+            background-color: var(--bg-pure-black); 
+            padding: 45px 35px;
+            border-radius: 16px;
+            border: 2px solid var(--accent-blue); /* Fedora blue border framing */
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .auth-card h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-align: center;
+            letter-spacing: -1px;
+            color: var(--text-main);
+        }
+
+        .auth-card p {
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px 16px;
+            background-color: var(--bg-pure-black);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 5px;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            box-shadow: 0 0 15px rgba(60, 110, 180, 0.4);
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .btn-text:hover {
+            color: var(--error-color);
+        }
+
+        .error-text {
+            color: var(--error-color);
+            font-size: 13px;
+            text-align: center;
+            min-height: 20px;
+            font-weight: 500;
+        }
+
+        /* Workspace Core Structures */
+        .container {
+            max-width: 1140px;
+            margin: 0 auto;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 35px;
+        }
+
+        .app-header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .user-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 14px;
+            background-color: var(--card-dark);
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 1px solid var(--accent-blue); /* Fedora blue highlight ring */
+        }
+
+        .user-status-bar strong {
+            color: var(--accent-blue);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 28px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card.studying {
+            border-color: #1abc9c;
+            box-shadow: 0 0 30px rgba(26, 188, 156, 0.15);
+        }
+
+        .card.is-leader {
+            border-color: var(--leader-gold);
+        }
+
+        .leader-badge {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            font-size: 1.6rem;
+        }
+
+        .reward-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 1.6rem;
+        }
+
+        .name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #1e1e24;
+            color: var(--text-muted);
+            margin-bottom: 22px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card.studying .status-badge {
+            background: rgba(26, 188, 156, 0.15);
+            color: #1abc9c;
+        }
+
+        .timer-display {
+            font-size: 2.8rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 8px;
+        }
+
+        .max-display {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .break-msg {
+            display: inline-block;
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+            background: rgba(81, 162, 218, 0.1);
+            border: 1px solid rgba(81, 162, 218, 0.15);
+            padding: 6px 14px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button.control-btn {
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button.control-btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-toggle {
+            background: #1abc9c;
+            color: #050505;
+            min-width: 90px;
+        }
+
+        .btn-toggle.active-pausing {
+            background: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-main);
+        }
+
+        .btn-focus {
+            background: var(--accent-blue);
+            color: #000000; /* Clean dark-on-light contrast for Fedora blue */
+        }
+
+        .btn-pip {
+            background: #222226;
+            color: var(--text-main);
+            border: 1px solid #333339;
+        }
+
+        .btn-reset {
+            background: transparent;
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            opacity: 0.5;
+        }
+
+        .btn-reset:hover {
+            opacity: 1;
+            background: rgba(255, 51, 51, 0.05);
+        }
+
+        .history-card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        .history-card h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            background: #16161c;
+        }
+
+        th:first-child, td:first-child {
+            position: sticky;
+            left: 0;
+            background: #16161c;
+            z-index: 10;
+            border-right: 2px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        td:first-child {
+            background: var(--card-dark);
+        }
+
+        td {
+            color: #e2e8f0;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .is-mobile .btn-pip {
+            display: none !important;
+        }
+
+        @keyframes popEffect {
+            0% { transform: scale(0.6); opacity: 0; }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .pop-animation {
+            animation: popEffect 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="auth-gate" class="overlay">
+        <div class="auth-card">
+            <h2>FocusTracker</h2>
+            <p>Enter your unique profile name and the squad access key to join the live session.</p>
+            
+            <div class="form-group">
+                <input type="text" id="user-input" placeholder="Enter Your Name" autocomplete="off">
+                <input type="password" id="secret-input" placeholder="Secret Access Code" autocomplete="off">
+                
+                <div id="auth-error" class="error-text"></div>
+                <button id="btn-login" class="btn-primary">Enter Workspace</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="workspace" class="container" style="display: none;">
+        <header class="app-header">
+            <h1>⚡ Squad Workspace</h1>
+            <div class="user-status-bar">
+                <span>Connected as: <strong id="current-user-display">...</strong></span>
+                <button id="btn-logout" class="btn-text">Leave Squad</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="grid" id="squad-grid"></section>
+            
+            <section id="history-section" class="history-card">
+                <h3>📅 Squad History (Last 5 Days)</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr id="table-headers">
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="pip-render-sandbox" aria-hidden="true" style="position: fixed; left: -9999px;">
+        <canvas id="pip-canvas" width="240" height="100"></canvas>
+        <video id="pip-video" muted playsinline></video>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+
+    <script>
+        console.log("[FocusTracker] Monolithic single-file runtime script initialized.");
+
+        // 1. DATABASE CONFIGURATION KEYS
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJu6D5IkoB6TlxaVw62OkyGqPl1zqoTEU", 
+            authDomain: "focustracker-e8d07.firebaseapp.com",
+            databaseURL: "https://focustracker-e8d07-default-rtdb.firebaseio.com", 
+            projectId: "focustracker-e8d07",
+            storageBucket: "focustracker-e8d07.firebasestorage.app",
+            messagingSenderId: "649183959326", 
+            appId: "1:649183959326:web:f11c994b047979650b910f" 
+        };
+
+        let app, db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            console.log("[FocusTracker] Firebase connection structurally verified.");
+        } catch (initError) {
+            console.error("[CRITICAL] Firebase setup encountered a structural error:", initError);
+        }
+
+        const MASTER_SQUAD_KEY = "opensesame";
+
+        let localState = { todayDate: new Date().toLocaleDateString('en-CA') };
+        let activeUser = localStorage.getItem('activeUser');
+        let screenWakeLock = null;
+        let workspaceFocusMode = false;
+
+        const isMobileClient = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        if (isMobileClient) document.body.classList.add('is-mobile');
+
+        let pipCanvas, pipCtx, pipVideo, squadGrid, tableHeaders;
+
+        // 2. VIEW CHANGERS
+        function mountAuthorizedWorkspace(username) {
+            const authGate = document.getElementById('auth-gate');
+            const workspace = document.getElementById('workspace');
+            const userDisplay = document.getElementById('current-user-display');
+            
+            if (authGate) authGate.style.display = 'none';
+            if (workspace) workspace.style.display = 'block';
+            if (userDisplay) userDisplay.textContent = username;
+            
+            requestWakeLockChannel();
+            rebuildDynamicInterfaceStructure();
+        }
+
+        function unmountWorkspace() {
+            const authGate = document.getElementById('auth-gate');
+            const workspace = document.getElementById('workspace');
+            
+            document.getElementById('user-input').value = "";
+            document.getElementById('secret-input').value = "";
+            document.getElementById('auth-error').textContent = "";
+
+            if (authGate) authGate.style.display = 'flex';
+            if (workspace) workspace.style.display = 'none';
+            releaseWakeLockChannel();
+        }
+
+        // 3. ACTION EVENT CONTROLLERS
+        window.verifyAndLogin = async () => {
+            const nameInput = document.getElementById('user-input');
+            const passwordInput = document.getElementById('secret-input');
+            const errorDisplay = document.getElementById('auth-error');
+
+            if (errorDisplay) errorDisplay.textContent = "";
+
+            const enteredName = nameInput.value.trim();
+            const enteredPassword = passwordInput.value.trim();
+
+            if (!enteredName || !enteredPassword) {
+                if (errorDisplay) errorDisplay.textContent = "Please enter both a Profile Name and Access Key.";
+                return;
+            }
+            if (enteredName.includes('.') || enteredName.includes('#') || enteredName.includes('$') || enteredName.includes('[') || enteredName.includes(']')) {
+                if (errorDisplay) errorDisplay.textContent = "Names cannot contain database characters (., #, $, [, ]).";
+                return;
+            }
+            if (enteredPassword !== MASTER_SQUAD_KEY) {
+                if (errorDisplay) errorDisplay.textContent = "Incorrect Squad Access Key.";
+                return;
+            }
+            if (!db) {
+                if (errorDisplay) errorDisplay.textContent = "Database service engine is offline.";
+                return;
+            }
+
+            try {
+                const userRef = db.ref(`stats/${enteredName}`);
+                const snapshot = await userRef.once('value');
+
+                if (!snapshot.exists()) {
+                    await userRef.set({
+                        status: 'break',
+                        totalToday: 0,
+                        startTime: 0,
+                        maxSession: 0,
+                        lastBreakAt: ""
+                    });
+                }
+
+                activeUser = enteredName;
+                localStorage.setItem('activeUser', enteredName);
+                localStorage.setItem('studySecretVerified', 'true');
+
+                mountAuthorizedWorkspace(enteredName);
+
+            } catch (dbError) {
+                console.error("[FocusTracker] Runtime transaction crashed:", dbError);
+                if (errorDisplay) errorDisplay.textContent = `Server Error: ${dbError.message}`;
+            }
+        };
+
+        window.logoutUser = () => {
+            localStorage.removeItem('activeUser');
+            localStorage.removeItem('studySecretVerified');
+            unmountWorkspace();
+        };
+
+        // 4. PERSISTENT APP LIFECYCLE HANDLER
+        window.addEventListener('DOMContentLoaded', () => {
+            pipCanvas = document.getElementById('pip-canvas');
+            pipCtx = pipCanvas ? pipCanvas.getContext('2d') : null;
+            pipVideo = document.getElementById('pip-video');
+            squadGrid = document.getElementById('squad-grid');
+            tableHeaders = document.getElementById('table-headers');
+
+            // FIX: Explicitly bind the login event listener on window startup regardless of cache values
+            const loginBtn = document.getElementById('btn-login');
+            if (loginBtn) loginBtn.addEventListener('click', window.verifyAndLogin);
+
+            const cachedUser = localStorage.getItem('activeUser');
+            const isVerified = localStorage.getItem('studySecretVerified');
+
+            if (cachedUser && isVerified === 'true') {
+                activeUser = cachedUser;
+                mountAuthorizedWorkspace(cachedUser);
+            }
+
+            const logoutBtn = document.getElementById('btn-logout');
+            if (logoutBtn) logoutBtn.addEventListener('click', window.logoutUser);
+
+            if (db) initDatabaseListeners();
+        });
+
+        // 5. HARDWARE WAKE-LOCK INTEGRATION
+        async function requestWakeLockChannel() {
+            if ('wakeLock' in navigator && !screenWakeLock) {
+                try { screenWakeLock = await navigator.wakeLock.request('screen'); }
+                catch (err) { console.warn("System OS blocked WakeLock engagement:", err.message); }
+            }
+        }
+
+        function releaseWakeLockChannel() {
+            if (screenWakeLock) {
+                screenWakeLock.release().then(() => { screenWakeLock = null; });
+            }
+        }
+
+        // 6. PIPELINE STREAM ARCHITECTURE (PiP)
+        async function executePiPToggle() {
+            try {
+                if (document.pictureInPictureElement) {
+                    await document.exitPictureInPicture();
+                } else {
+                    renderPiPCanvasFrame('00:00:00', '🌱');
+                    const streamChannel = pipCanvas.captureStream(1); 
+                    pipVideo.srcObject = streamChannel;
+                    await pipVideo.play();
+                    await pipVideo.requestPictureInPicture();
+                }
+            } catch (err) { console.error("PiP Allocation Refused:", err); }
+        }
+
+        function renderPiPCanvasFrame(timeString, emojiCharacter) {
+            if (!pipCtx) return;
+            pipCtx.fillStyle = '#0d1117';
+            pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+            pipCtx.fillStyle = '#ffffff';
+            pipCtx.textAlign = 'center';
+            pipCtx.textBaseline = 'middle';
+            pipCtx.font = 'bold 28px Inter';
+            pipCtx.fillText(timeString, pipCanvas.width / 2 - 20, pipCanvas.height / 2);
+            pipCtx.font = '26px Inter';
+            pipCtx.fillText(emojiCharacter, pipCanvas.width - 35, pipCanvas.height / 2);
+        }
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === 'hidden' && activeUser) {
+                const profile = localState[activeUser];
+                if (profile && profile.status === 'studying' && !document.pictureInPictureElement) {
+                    executeStatusToggle(); 
+                }
+            } else if (document.visibilityState === 'visible' && activeUser) {
+                const profile = localState[activeUser];
+                if (profile && profile.status === 'studying') requestWakeLockChannel();
+            }
+        });
+
+        // 7. FOCUS VISIBILITY CONTROLLER
+        function executeFocusToggle() {
+            workspaceFocusMode = !workspaceFocusMode;
+            const allMembers = Object.keys(localState).filter(key => key !== 'todayDate');
+            
+            allMembers.forEach(member => {
+                if (member !== activeUser) {
+                    const cardNode = document.getElementById(`card-${member}`);
+                    if (cardNode) cardNode.style.display = workspaceFocusMode ? 'none' : 'block';
+                }
+            });
+            document.getElementById('history-section').style.display = workspaceFocusMode ? 'none' : 'block';
+            document.getElementById('btn-logout').style.display = workspaceFocusMode ? 'none' : 'block';
+            
+            const focusBtn = document.getElementById(`focus-${activeUser}`);
+            if (focusBtn) {
+                focusBtn.innerText = workspaceFocusMode ? 'Show All' : 'Focus';
+                focusBtn.style.background = workspaceFocusMode ? '#707e94' : '#51a2da';
+            }
+        }
+
+        // 8. DATABASE REALTIME ENGINE INTERACTION
+        function initDatabaseListeners() {
+            db.ref('stats').on('value', (snapshot) => {
+                const remoteData = snapshot.val() || { todayDate: new Date().toLocaleDateString('en-CA') };
+                const systemTodayString = new Date().toLocaleDateString('en-CA');
+                
+                if (remoteData.todayDate && remoteData.todayDate !== systemTodayString) {
+                    executeMidnightResetCycle(remoteData, systemTodayString);
+                } else {
+                    localState = remoteData;
+                    rebuildDynamicInterfaceStructure();
+                }
+            });
+
+            db.ref('history').on('value', (snapshot) => {
+                if (!tableHeaders) return;
+                const tableBody = document.getElementById('table-body');
+                tableBody.innerHTML = '';
+                const historicalNode = snapshot.val();
+                if (!historicalNode) {
+                    tableBody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--text-muted); padding: 30px 0;">No workspace activity history.</td></tr>`;
+                    return;
+                }
+
+                const historicalMembers = new Set();
+                Object.values(historicalNode).forEach(dayData => {
+                    Object.keys(dayData).forEach(name => historicalMembers.add(name));
+                });
+                const sortedMembersList = Array.from(historicalMembers).sort();
+
+                tableHeaders.innerHTML = `<th>Date</th>` + sortedMembersList.map(m => `<th>${m}</th>`).join('');
+
+                Object.keys(historicalNode).sort((a, b) => new Date(b) - new Date(a)).forEach(dateKey => {
+                    const rowData = historicalNode[dateKey];
+                    let structuralCells = `<td>${dateKey}</td>`;
+                    sortedMembersList.forEach(member => {
+                        structuralCells += `<td>${rowData[member] || '00:00:00'}</td>`;
+                    });
+                    tableBody.innerHTML += `<tr>${structuralCells}</tr>`;
+                });
+            });
+        }
+
+        function rebuildDynamicInterfaceStructure() {
+            if (!squadGrid || !activeUser) return;
+            const currentRegisteredMembers = Object.keys(localState).filter(key => key !== 'todayDate');
+            squadGrid.innerHTML = '';
+
+            if (currentRegisteredMembers.length === 0) {
+                squadGrid.innerHTML = `<div class="squad-member-card" style="width:100%; grid-column: 1/-1;"><p style="color: var(--text-muted); font-size:14px; text-align:center;">Initializing workspace metrics sync...</p></div>`;
+                return;
+            }
+
+            currentRegisteredMembers.forEach(member => {
+                const data = localState[member];
+                const activeStudyingFlag = data.status === 'studying';
+                const isMe = member === activeUser;
+
+                squadGrid.innerHTML += `
+                    <div id="card-${member}" class="card ${activeStudyingFlag ? 'studying' : ''}">
+                        <div id="leader-${member}" class="leader-badge" style="display: none;">🏆</div>
+                        <div id="reward-${member}" class="reward-badge">🌱</div>
+                        <div class="name">${member}</div>
+                        <div id="status-${member}" class="status-badge">${activeStudyingFlag ? 'Studying' : 'On Break'}</div>
+                        <div id="timer-${member}" class="timer-display">00:00:00</div>
+                        <div class="max-display">Max Session: <span id="max-${member}">${convertSecondsToFormattedString(data.maxSession || 0)}</span></div>
+                        <div id="msg-${member}" class="break-msg" style="${data.lastBreakAt && !activeStudyingFlag ? 'display: inline-block;' : 'display: none;'}">${data.lastBreakAt || ''}</div>
+                        <div id="controls-${member}" class="controls" style="${isMe ? 'display: flex;' : 'display: none;'}">
+                            <button id="toggle-${member}" class="control-btn btn-toggle ${activeStudyingFlag ? 'active-pausing' : ''}">${activeStudyingFlag ? 'Pause' : (data.totalToday > 0 ? 'Resume' : 'Start')}</button>
+                            <button id="focus-${member}" class="control-btn btn-focus">Focus</button>
+                            <button id="pip-${member}" class="control-btn btn-pip">PiP</button>
+                            <button id="reset-${member}" class="control-btn btn-reset">Reset</button>
+                        </div>
+                    </div>`;
+            });
+
+            if (currentRegisteredMembers.includes(activeUser)) {
+                setTimeout(() => {
+                    const toggleBtn = document.getElementById(`toggle-${activeUser}`);
+                    const focusBtn = document.getElementById(`focus-${activeUser}`);
+                    const pipBtn = document.getElementById(`pip-${activeUser}`);
+                    const resetBtn = document.getElementById(`reset-${activeUser}`);
+
+                    if (toggleBtn && !toggleBtn.dataset.wired) {
+                        toggleBtn.addEventListener('click', executeStatusToggle);
+                        if (focusBtn) focusBtn.addEventListener('click', executeFocusToggle);
+                        if (pipBtn) pipBtn.addEventListener('click', executePiPToggle);
+                        if (resetBtn) resetBtn.addEventListener('click', executeLocalReset);
+                        toggleBtn.dataset.wired = "true";
+                    }
+                }, 50);
+            }
+        }
+
+        function executeStatusToggle() {
+            if (!activeUser || !localState[activeUser]) return;
+            const profile = localState[activeUser];
+            const clockString = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            
+            if (profile.status === 'studying') {
+                releaseWakeLockChannel();
+                const absoluteDeltaSessionSeconds = Math.floor((Date.now() - profile.startTime) / 1000);
+                db.ref(`stats/${activeUser}`).update({
+                    status: 'break',
+                    totalToday: (profile.totalToday || 0) + absoluteDeltaSessionSeconds,
+                    maxSession: Math.max((profile.maxSession || 0), absoluteDeltaSessionSeconds),
+                    startTime: 0,
+                    lastBreakAt: `Paused study session at ${clockString}`
+                });
+            } else {
+                requestWakeLockChannel();
+                db.ref(`stats/${activeUser}`).update({
+                    status: 'studying',
+                    startTime: Date.now(),
+                    lastBreakAt: ""
+                });
+            }
+        }
+
+        function executeLocalReset() {
+            if (!activeUser) return;
+            if (confirm("Reset today's progress parameters to absolute zero?")) {
+                releaseWakeLockChannel();
+                db.ref(`stats/${activeUser}`).update({ totalToday: 0, startTime: 0, status: 'break', maxSession: 0, lastBreakAt: "" });
+            }
+        }
+
+        async function executeMidnightResetCycle(staleCloudData, verifiedNewCalendarDate) {
+            const historicalPayload = {};
+            const trackableMembers = Object.keys(staleCloudData).filter(key => key !== 'todayDate');
+
+            trackableMembers.forEach(m => {
+                let accumulatedSeconds = staleCloudData[m]?.totalToday || 0;
+                if (staleCloudData[m]?.status === 'studying' && staleCloudData[m]?.startTime) {
+                    accumulatedSeconds += Math.floor((Date.now() - staleCloudData[m].startTime) / 1000);
+                }
+                historicalPayload[m] = convertSecondsToFormattedString(accumulatedSeconds);
+            });
+
+            try {
+                const archiveSnapshot = await db.ref('history').once('value');
+                let trackingObject = archiveSnapshot.exists() ? archiveSnapshot.val() : {};
+                trackingObject[staleCloudData.todayDate] = historicalPayload;
+
+                const loggedKeys = Object.keys(trackingObject).sort((a, b) => new Date(b) - new Date(a));
+                if (loggedKeys.length > 5) {
+                    const truncatedObject = {};
+                    loggedKeys.slice(0, 5).forEach(k => truncatedObject[k] = trackingObject[k]);
+                    trackingObject = truncatedObject;
+                }
+
+                const clearWorkspaceStats = { todayDate: verifiedNewCalendarDate };
+                trackableMembers.forEach(m => {
+                    clearWorkspaceStats[m] = { status: 'break', totalToday: 0, startTime: 0, maxSession: 0, lastBreakAt: "" };
+                });
+
+                await db.ref().update({ 'history': trackingObject, 'stats': clearWorkspaceStats });
+            } catch (err) {
+                console.error("Midnight rotation error:", err);
+            }
+        }
+
+        // 9. HIGH-PERFORMANCE WORKSPACE REFRESH INTERVAL
+        setInterval(() => {
+            const registeredMembers = Object.keys(localState).filter(key => key !== 'todayDate');
+            let globalPeakTimeValue = 0;
+            let currentLeaderIdentity = "";
+
+            registeredMembers.forEach(member => {
+                const profile = localState[member];
+                if (!profile) return;
+                
+                let runningTotalCumulativeSeconds = profile.totalToday || 0;
+                if (profile.status === 'studying' && profile.startTime) {
+                    runningTotalCumulativeSeconds += Math.floor((Date.now() - profile.startTime) / 1000);
+                }
+
+                if (runningTotalCumulativeSeconds > globalPeakTimeValue) {
+                    globalPeakTimeValue = runningTotalCumulativeSeconds;
+                    currentLeaderIdentity = member;
+                }
+
+                const standardFormattedClockOutput = convertSecondsToFormattedString(runningTotalCumulativeSeconds);
+                const timerNode = document.getElementById(`timer-${member}`);
+                if (timerNode) timerNode.innerText = standardFormattedClockOutput;
+                
+                const contextualEmoji = evaluateMetricsEmoji(runningTotalCumulativeSeconds);
+                const rewardBadgeElement = document.getElementById(`reward-${member}`);
+                if (rewardBadgeElement && rewardBadgeElement.innerText !== contextualEmoji) {
+                    rewardBadgeElement.innerText = contextualEmoji;
+                    rewardBadgeElement.classList.add('pop-animation');
+                    setTimeout(() => rewardBadgeElement.classList.remove('pop-animation'), 400);
+                }
+
+                if (member === activeUser && document.pictureInPictureElement) {
+                    renderPiPCanvasFrame(standardFormattedClockOutput, contextualEmoji);
+                }
+            });
+
+            registeredMembers.forEach(member => {
+                const cardNode = document.getElementById('card-' + member);
+                const leaderBadgeNode = document.getElementById('leader-' + member);
+                if (!cardNode) return;
+
+                if (member === currentLeaderIdentity && globalPeakTimeValue > 0) {
+                    cardNode.classList.add('is-leader');
+                    if (leaderBadgeNode) leaderBadgeNode.style.display = 'block';
+                } else {
+                    cardNode.classList.remove('is-leader');
+                    if (leaderBadgeNode) leaderBadgeNode.style.display = 'none';
+                }
+            });
+        }, 1000);
+
+        function evaluateMetricsEmoji(totalSecondsSeconds) {
+            const calculatedHoursValue = totalSecondsSeconds / 3600;
+            if (calculatedHoursValue >= 12) return "🌌";
+            if (calculatedHoursValue >= 9) return "👑";
+            if (calculatedHoursValue >= 7) return "🗿";
+            if (calculatedHoursValue >= 5) return "🔥";
+            if (calculatedHoursValue >= 3) return "🌿";
+            if (calculatedHoursValue >= 1) return "🍃";
+            return "🌱";
+        }
+
+        function convertSecondsToFormattedString(totalSecondsSeconds) {
+            const hours = Math.floor(totalSecondsSeconds / 3600);
+            const minutes = Math.floor((totalSecondsSeconds % 3600) / 60);
+            const seconds = totalSecondsSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
