@@ -1,2 +1,2 @@
 # FocusTracker
-Track your and your friend's time spent on the things you planned to do.
+FocusTracker is a real-time collaborative study tracker🕐 that helps students stay accountable, monitor focus sessions🧘🏽‍♀️, compete with friends🧑‍🤝‍🧑, and build consistent📈 study habits through shared progress tracking.
