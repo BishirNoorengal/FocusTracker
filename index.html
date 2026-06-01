@@ -52,7 +52,7 @@
 
         .auth-card {
             background-color: var(--bg-pure-black); 
-            padding: 45px 35px;
+            padding: 40px 35px;
             border-radius: 16px;
             border: 2px solid var(--accent-blue); /* Fedora blue border framing */
             max-width: 420px;
@@ -71,20 +71,21 @@
 
         .auth-card p {
             color: var(--text-muted);
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
+            line-height: 1.4;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
         input[type="text"], input[type="password"] {
             width: 100%;
-            padding: 15px 16px;
+            padding: 14px 16px;
             background-color: var(--bg-pure-black);
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -137,6 +138,7 @@
             text-align: center;
             min-height: 20px;
             font-weight: 500;
+            line-height: 1.4;
         }
 
         /* Workspace Core Structures */
@@ -173,6 +175,7 @@
 
         .user-status-bar strong {
             color: var(--accent-blue);
+            text-transform: lowercase;
         }
 
         .grid {
@@ -220,6 +223,7 @@
             font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 6px;
+            text-transform: lowercase;
         }
 
         .status-badge {
@@ -300,7 +304,7 @@
 
         .btn-focus {
             background: var(--accent-blue);
-            color: #000000; /* Clean dark-on-light contrast for Fedora blue */
+            color: #000000;
         }
 
         .btn-pip {
@@ -403,11 +407,12 @@
     <div id="auth-gate" class="overlay">
         <div class="auth-card">
             <h2>FocusTracker</h2>
-            <p>Enter your unique profile name and the squad access key to join the live session.</p>
+            <p>Enter a unique profile name, the common squad access key, and your personal secret password.</p>
             
             <div class="form-group">
-                <input type="text" id="user-input" placeholder="Enter Your Name" autocomplete="off">
-                <input type="password" id="secret-input" placeholder="Secret Access Code" autocomplete="off">
+                <input type="text" id="user-input" placeholder="Profile Name (Letters, numbers, _, .)" autocomplete="off">
+                <input type="password" id="secret-input" placeholder="Squad Access Key" autocomplete="off">
+                <input type="password" id="password-input" placeholder="Your Personal Password" autocomplete="off">
                 
                 <div id="auth-error" class="error-text"></div>
                 <button id="btn-login" class="btn-primary">Enter Workspace</button>
@@ -452,7 +457,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 
     <script>
-        console.log("[FocusTracker] Monolithic single-file runtime script initialized.");
+        console.log("[FocusTracker] Secure monolithic runtime engine initialized.");
 
         // 1. DATABASE CONFIGURATION KEYS
         const firebaseConfig = {
@@ -477,7 +482,7 @@
         const MASTER_SQUAD_KEY = "opensesame";
 
         let localState = { todayDate: new Date().toLocaleDateString('en-CA') };
-        let activeUser = localStorage.getItem('activeUser');
+        let activeUser = localStorage.getItem('activeUser') ? localStorage.getItem('activeUser').toLowerCase() : null;
         let screenWakeLock = null;
         let workspaceFocusMode = false;
 
@@ -506,6 +511,7 @@
             
             document.getElementById('user-input').value = "";
             document.getElementById('secret-input').value = "";
+            document.getElementById('password-input').value = "";
             document.getElementById('auth-error').textContent = "";
 
             if (authGate) authGate.style.display = 'flex';
@@ -516,23 +522,28 @@
         // 3. ACTION EVENT CONTROLLERS
         window.verifyAndLogin = async () => {
             const nameInput = document.getElementById('user-input');
-            const passwordInput = document.getElementById('secret-input');
+            const squadInput = document.getElementById('secret-input');
+            const personalPasswordInput = document.getElementById('password-input');
             const errorDisplay = document.getElementById('auth-error');
 
             if (errorDisplay) errorDisplay.textContent = "";
 
-            const enteredName = nameInput.value.trim();
-            const enteredPassword = passwordInput.value.trim();
+            const enteredName = nameInput.value.trim().toLowerCase();
+            const enteredSquadKey = squadInput.value.trim();
+            const enteredPersonalPassword = personalPasswordInput.value.trim();
 
-            if (!enteredName || !enteredPassword) {
-                if (errorDisplay) errorDisplay.textContent = "Please enter both a Profile Name and Access Key.";
+            if (!enteredName || !enteredSquadKey || !enteredPersonalPassword) {
+                if (errorDisplay) errorDisplay.textContent = "Please fill out all fields: Name, Squad Key, and Personal Password.";
                 return;
             }
-            if (enteredName.includes('.') || enteredName.includes('#') || enteredName.includes('$') || enteredName.includes('[') || enteredName.includes(']')) {
-                if (errorDisplay) errorDisplay.textContent = "Names cannot contain database characters (., #, $, [, ]).";
+
+            const characterFilterRules = /^[a-z0-9_.]+$/;
+            if (!characterFilterRules.test(enteredName)) {
+                if (errorDisplay) errorDisplay.textContent = "Name taken or invalid. Use only lower letters, numbers, underscores (_), or dots (.).";
                 return;
             }
-            if (enteredPassword !== MASTER_SQUAD_KEY) {
+
+            if (enteredSquadKey !== MASTER_SQUAD_KEY) {
                 if (errorDisplay) errorDisplay.textContent = "Incorrect Squad Access Key.";
                 return;
             }
@@ -545,8 +556,15 @@
                 const userRef = db.ref(`stats/${enteredName}`);
                 const snapshot = await userRef.once('value');
 
-                if (!snapshot.exists()) {
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.password && userData.password !== enteredPersonalPassword) {
+                        if (errorDisplay) errorDisplay.textContent = "This profile name is already taken. Please pick a completely unique name using letters, numbers, underscores, or dots.";
+                        return;
+                    }
+                } else {
                     await userRef.set({
+                        password: enteredPersonalPassword,
                         status: 'break',
                         totalToday: 0,
                         startTime: 0,
@@ -570,6 +588,7 @@
         window.logoutUser = () => {
             localStorage.removeItem('activeUser');
             localStorage.removeItem('studySecretVerified');
+            activeUser = null;
             unmountWorkspace();
         };
 
@@ -581,7 +600,6 @@
             squadGrid = document.getElementById('squad-grid');
             tableHeaders = document.getElementById('table-headers');
 
-            // FIX: Explicitly bind the login event listener on window startup regardless of cache values
             const loginBtn = document.getElementById('btn-login');
             if (loginBtn) loginBtn.addEventListener('click', window.verifyAndLogin);
 
@@ -589,8 +607,8 @@
             const isVerified = localStorage.getItem('studySecretVerified');
 
             if (cachedUser && isVerified === 'true') {
-                activeUser = cachedUser;
-                mountAuthorizedWorkspace(cachedUser);
+                activeUser = cachedUser.toLowerCase();
+                mountAuthorizedWorkspace(activeUser);
             }
 
             const logoutBtn = document.getElementById('btn-logout');
@@ -719,13 +737,14 @@
 
         function rebuildDynamicInterfaceStructure() {
             if (!squadGrid || !activeUser) return;
-            const currentRegisteredMembers = Object.keys(localState).filter(key => key !== 'todayDate');
-            squadGrid.innerHTML = '';
-
-            if (currentRegisteredMembers.length === 0) {
+            
+            if (!localState[activeUser]) {
                 squadGrid.innerHTML = `<div class="squad-member-card" style="width:100%; grid-column: 1/-1;"><p style="color: var(--text-muted); font-size:14px; text-align:center;">Initializing workspace metrics sync...</p></div>`;
                 return;
             }
+
+            const currentRegisteredMembers = Object.keys(localState).filter(key => key !== 'todayDate');
+            squadGrid.innerHTML = '';
 
             currentRegisteredMembers.forEach(member => {
                 const data = localState[member];
@@ -827,7 +846,8 @@
 
                 const clearWorkspaceStats = { todayDate: verifiedNewCalendarDate };
                 trackableMembers.forEach(m => {
-                    clearWorkspaceStats[m] = { status: 'break', totalToday: 0, startTime: 0, maxSession: 0, lastBreakAt: "" };
+                    const savedPassword = staleCloudData[m]?.password || "";
+                    clearWorkspaceStats[m] = { password: savedPassword, status: 'break', totalToday: 0, startTime: 0, maxSession: 0, lastBreakAt: "" };
                 });
 
                 await db.ref().update({ 'history': trackingObject, 'stats': clearWorkspaceStats });
