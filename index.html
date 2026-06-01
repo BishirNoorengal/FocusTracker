@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusTracker | Squad Workspace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="auth-gate" class="overlay">
+        <div class="auth-card">
+            <h2>FocusTracker</h2>
+            <p>Enter your unique profile name and the squad access key to join the live session.</p>
+            
+            <div class="form-group">
+                <input type="text" id="user-input" placeholder="Enter Your Name" autocomplete="off">
+                
+                <input type="password" id="secret-input" placeholder="Secret Access Code">
+                
+                <div id="auth-error" class="error-text"></div>
+                <button id="btn-login" class="btn-primary">Enter Workspace</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="workspace" class="container" style="display: none;">
+        <header class="app-header">
+            <h1>⚡ Squad Workspace</h1>
+            <div class="user-status-bar">
+                <span>Connected as: <strong id="current-user-display">...</strong></span>
+                <button id="btn-logout" class="btn-text">Leave Squad</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="grid" id="squad-grid"></section>
+            
+            <section id="history-section" class="history-card">
+                <h3>📅 Squad History (Last 5 Days)</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr id="table-headers">
+                                <th>Date</th>
+                                </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="pip-render-sandbox" aria-hidden="true" style="position: fixed; left: -9999px;">
+        <canvas id="pip-canvas" width="240" height="100"></canvas>
+        <video id="pip-video" muted playsinline></video>
+    </div>
+   
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
